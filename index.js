@@ -12,7 +12,7 @@ const server = app.listen(process.env.PORT || 80, () => {
     console.log('Express server listening on port %d in %s mode', server.address().port, app.settings.env);
 });
 
-const PAGE_ACCESS_TOKEN = "EAADCTVrZAbjIBANyvZCnBwGXvzzmjSlzB99oaZA4JiNeu7LcZBfUCRDVZA1qRrzFFkv58hbgZAoJyZBpchPFkKOYSYJoeMQeVG7YIHQFsCHyAn0M35sZA93tg1qiN5apV9Ddq1wFr06EMtOskfbl1BY4GgQe8L9s4J9VJci9qZBsXdQZDZD";
+const PAGE_ACCESS_TOKEN = "EAAau3YEyVjMBAHd2tca2y6CsW1JIdSkEpN0ZA2FDZBZBHmnOE0rdwcJn6Ev3Qs68ozVk3VrGlZB1pmDwa3q9BlQdV5aBcNvkZCv2PBpG5l2NVwEFGZCF0YrazzABpd0y2pgW7PIE3JZC0rPHglgLT2sgHZCzBxqUQ57yHL777Ie5uwZDZD";
 
 /* For Facebook Validation */
 app.get('/webhook', (req, res) => {
@@ -28,8 +28,9 @@ app.post('/webhook', (req, res) => {
     if (req.body.object === 'page') {
         req.body.entry.forEach((entry) => {
             entry.messaging.forEach((event) => {
-                if (event.message && event.message.text) {
-                    sendMessage1(event);
+                var attachment = event.message.attachments[0];
+                if (attachment.type == "image") {
+                    sendMessage(event.sender.id, attachment.payload.url);
                 }
             });
         });
@@ -37,77 +38,7 @@ app.post('/webhook', (req, res) => {
     }
 });
 
-function sendMessage(event) {
-    let sender = event.sender.id;
-    let text = event.message.text;
-
-    request({
-        url: 'https://graph.facebook.com/v2.6/me/messages',
-        qs: {
-            access_token: PAGE_ACCESS_TOKEN
-        },
-        method: 'POST',
-        json: {
-            recipient: {
-                id: sender
-            },
-            message: {
-                text: text
-            }
-        }
-    }, function (error, response) {
-        if (error) {
-            console.log('Error sending message: ', error);
-        } else if (response.body.error) {
-            console.log('Error: ', response.body.error);
-        }
-    });
-}
-
-function sendMessage1(event) {
-    let sender = event.sender.id;
-    let text = event.message.text;
-
-    request({
-        url: 'http://gpa.madbob.org/query.php?stop=' + text,
-        method: 'GET',
-    }, function (error, response) {
-
-        if (error) {
-            console.log('Error sending message: ', error);
-        } else if (response.body.error) {
-            console.log('Error: ', response.body.error);
-        } else {
-            //parse response and create message
-            var message = "Passaggi nella fermata: " + text + " \n ";
-            var preMessage = message;
-            var responseJson = JSON.parse(response.body);
-
-            for (var i = 0; i < responseJson.length; i++) {
-                var el = responseJson[i];
-                var elFormatted = el.line + " direzione " + el.direction + " alle ore " + el.hour + " \n ";
-                message += elFormatted;
-                console.log(message.length);
-                if (message.length <= 640) {
-                    preMessage = message;
-                    console.log("add");
-                } else {
-                    console.log("send");
-                    sendPart(sender, preMessage);
-                    message = elFormatted;
-                    preMessage = "";
-                }
-
-            }
-            sendPart(sender, message);
-
-        }
-
-    });
-
-}
-
-function sendPart(sender, message) {
+function sendMessage(sender, message) {
 
     request({
         url: 'https://graph.facebook.com/v2.6/me/messages',
