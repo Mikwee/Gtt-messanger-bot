@@ -28,15 +28,47 @@ app.post('/webhook', (req, res) => {
     if (req.body.object === 'page') {
         req.body.entry.forEach((entry) => {
             entry.messaging.forEach((event) => {
-                var attachment = event.message.attachments[0];
-                if (attachment.type == "image") {
-                    sendMessage(event.sender.id, attachment.payload.url);
+                if (attachment = event.message.attachments) {
+                    var attachment = event.message.attachments[0];
+                    if (attachment.type == "image") {
+                        //encode url
+                        var url = encodeURIComponent(attachment.payload.url).replace(/'/g, "%27").replace(/"/g, "%22");
+                        getImgContent(event.sender.id, url);
+                    }
+                } else {
+                    console.log(event.message.text);
                 }
             });
         });
         res.status(200).end();
     }
 });
+
+function getImgContent(sender, url) {
+
+    request({
+        url: 'http://api.qrserver.com/v1/read-qr-code/?fileurl=' + url,
+        method: 'GET',
+    }, function (error, response) {
+
+        if (error) {
+            console.log('Error sending message: ', error);
+        } else if (response.body.error) {
+            console.log('Error: ', response.body.error);
+        } else {
+
+            var responseJson = JSON.parse(response.body);
+            var result = responseJson[0].symbol[0].data;
+            if (result == null)
+                result = responseJson[0].symbol[0].error;
+
+            sendMessage(sender, result);
+
+        }
+
+    });
+
+}
 
 function sendMessage(sender, message) {
 
